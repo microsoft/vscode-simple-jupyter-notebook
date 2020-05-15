@@ -130,7 +130,10 @@ export class KernelManager implements IDisposable {
     }
   }
 
-  private closeAllKernels() {
+  /**
+   * Closes all running kernels.
+   */
+  public closeAllKernels() {
     this.activeConns.forEach(c => c.then(k => k?.dispose()));
     this.activeConns.clear();
   }

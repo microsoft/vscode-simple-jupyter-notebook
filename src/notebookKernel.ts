@@ -13,6 +13,10 @@ import { observeCodeEvent } from './util';
  * outputs JSON cells. Doesn't read files or save anything.
  */
 export class NotebookKernel implements vscode.NotebookKernel {
+  private static readonly logOperations = false;
+
+  public label = 'Simple Kernel';
+
   constructor(private readonly kernels: KernelManager) {}
 
   /**
@@ -32,21 +36,70 @@ export class NotebookKernel implements vscode.NotebookKernel {
       return;
     }
 
-    const output = await kernel.connection
+    const outputStream = await kernel.connection
       .sendAndReceive(wireProtocol.executeRequest(cell.source))
       .pipe(
         takeWhile(msg => msg.header.msg_type !== 'execute_reply', true),
         takeUntil(observeCodeEvent(token.onCancellationRequested)),
-        reduce((acc, msg) => `${acc + msg.header.msg_type}:${JSON.stringify(msg.content)}\n`, ''),
+      );
+
+    const collectedMessages = outputStream
+      .pipe(
+        reduce(
+          (acc: { type: string; content: unknown }[], msg) => [
+            ...acc,
+            { type: msg.header.msg_type, content: msg.content },
+          ],
+          [],
+        ),
       )
       .toPromise();
 
-    cell.outputs = [
-      {
+    const kernelOutputs = outputStream
+      .pipe(
+        reduce((acc: vscode.CellOutput[], msg) => {
+          switch (msg.header.msg_type) {
+            case 'display_data':
+              return [
+                ...acc,
+                {
+                  outputKind: vscode.CellOutputKind.Rich,
+                  data: msg.content.data,
+                },
+              ];
+            case 'error':
+              return [
+                ...acc,
+                {
+                  outputKind: vscode.CellOutputKind.Error,
+                  ...msg.content,
+                },
+              ];
+            case 'stream':
+              const prev = acc[acc.length - 1];
+              const content = msg.content.text as string;
+              if (prev?.outputKind === vscode.CellOutputKind.Text) {
+                return [
+                  ...acc.slice(0, -1),
+                  { outputKind: vscode.CellOutputKind.Text, text: prev.text + content },
+                ];
+              }
+
+              return [...acc, { outputKind: vscode.CellOutputKind.Text, text: content }];
+            default:
+              return acc;
+          }
+        }, []),
+      )
+      .toPromise();
+
+    cell.outputs = await kernelOutputs;
+    if (NotebookKernel.logOperations) {
+      cell.outputs.push({
         outputKind: vscode.CellOutputKind.Text,
-        text: output,
-      },
-    ];
+        text: (await collectedMessages).map(m => JSON.stringify(m)).join('\n'),
+      });
+    }
   }
 
   /**

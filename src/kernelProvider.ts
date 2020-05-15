@@ -32,15 +32,17 @@ export interface IRunningKernel extends IDisposable {
   process: KernelProcess;
 }
 
+export interface IKernelSpecSearchPath {
+  type: LocationType;
+  path: string;
+}
+
 export class KernelProvider {
   /**
-   * Returns a rougly prioritized list of available
-   * kernels available on the system.
+   * Gets the default search platforms for the current environment.
    */
-  public async getAvailableKernels() {
-    // Search paths from Jupyer docs + what I observed on Conda
-    // @see https://jupyter-client.readthedocs.io/en/stable/kernels.html
-    const searchPaths: { type: LocationType; path: string }[] = [];
+  public static defaultSearchPaths() {
+    const searchPaths: IKernelSpecSearchPath[] = [];
     if (process.env.CONDA_PREFIX) {
       searchPaths.push(
         { type: LocationType.User, path: join(process.env.CONDA_PREFIX, 'share/jupyter/kernels') },
@@ -67,10 +69,20 @@ export class KernelProvider {
       );
     }
 
+    return searchPaths;
+  }
+
+  constructor(private readonly searchPaths: () => ReadonlyArray<IKernelSpecSearchPath>) {}
+
+  /**
+   * Returns a rougly prioritized list of available
+   * kernels available on the system.
+   */
+  public async getAvailableKernels() {
     // In each folder, there can be subdirectories that contain the `kernel.json`
     // and logo. Extract and return those.
     let specs: Promise<IKernelSpec>[] = [];
-    for (const { path, type } of searchPaths) {
+    for (const { path, type } of this.searchPaths()) {
       let kernels: string[];
       try {
         kernels = await fs.readdir(path);
