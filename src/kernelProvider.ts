@@ -74,7 +74,7 @@ export class KernelProvider {
     return searchPaths;
   }
 
-  constructor(private readonly searchPaths: () => ReadonlyArray<IKernelSpecSearchPath>) {}
+  constructor(private readonly searchPaths: () => ReadonlyArray<IKernelSpecSearchPath>) { }
 
   /**
    * Returns a rougly prioritized list of available
@@ -92,7 +92,7 @@ export class KernelProvider {
         continue;
       }
 
-      for (const kernel in kernels) {
+      for (const kernel of kernels) {
         const jsonPath = join(path, kernel, 'kernel.json');
         if (await exists(jsonPath)) {
           const rawSpec = JSON.parse(await fs.readFile(jsonPath, 'utf-8'));
