@@ -10,6 +10,7 @@ import { Connection } from './connection';
 import { spawn } from 'child_process';
 import { KernelProcess } from './kernelProcess';
 import { IDisposable } from './disposable';
+import { Push } from 'zeromq';
 
 export interface IKernelSpec {
   id: string;
@@ -91,12 +92,12 @@ export class KernelProvider {
         continue;
       }
 
-      specs = specs.concat(
-        kernels.map(async kernel => {
-          const jsonPath = join(path, kernel, 'kernel.json');
-          const iconPath = join(path, kernel, 'logo-64x64.png');
+      for (const kernel in kernels) {
+        const jsonPath = join(path, kernel, 'kernel.json');
+        if (await exists(jsonPath)) {
           const rawSpec = JSON.parse(await fs.readFile(jsonPath, 'utf-8'));
-          return {
+          const iconPath = join(path, kernel, 'logo-64x64.png');
+          specs.push(Promise.resolve({
             id: [path, ...rawSpec.argv, rawSpec.language].join(' '),
             location: path,
             locationType: type,
@@ -107,9 +108,9 @@ export class KernelProvider {
             iconDataUri: (await exists(iconPath))
               ? `image/png;base64,${await fs.readFile(iconPath, 'base64')}`
               : undefined,
-          };
-        }),
-      );
+          }));
+        }
+      }
     }
 
     return uniqueBy(await Promise.all(specs), spec => spec.id);
