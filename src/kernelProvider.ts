@@ -62,6 +62,7 @@ export class KernelProvider {
       searchPaths.push(
         { type: LocationType.User, path: `${homedir()}/Library/Jupyter/kernels` },
         { type: LocationType.User, path: `${homedir()}/.local/share/jupyter/kernels` },
+        { type: LocationType.User, path: `${homedir()}/opt/miniconda3/share/jupyter/kernels` },
         { type: LocationType.User, path: `/opt/conda/share/jupyter/kernels` },
         { type: LocationType.User, path: `/opt/conda/local/share/jupyter/kernels` },
         { type: LocationType.Global, path: '/usr/share/jupyter/kernels' },
