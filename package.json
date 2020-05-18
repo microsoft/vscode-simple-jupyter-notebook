@@ -12,10 +12,30 @@
   "activationEvents": [
     "*",
     "onCommand:simple-jupyter-notebook.change-kernel",
-    "onCommand:simple-jupyter-notebook.restart-kernel"
+    "onCommand:simple-jupyter-notebook.restart-kernel",
+    "onDebug:xeus"
   ],
   "enableProposedApi": true,
   "contributes": {
+    "debuggers": [
+      {
+        "type": "xeus",
+        "label": "xeus Debug",
+        "configurationAttributes": {
+          "attach": {
+            "required": [
+              "port"
+            ],
+            "properties": {
+              "port": {
+                "type": "number",
+                "description": "debug port."
+              }
+            }
+          }
+        }
+      }
+    ],
     "commands": [
       {
         "command": "simple-jupyter-notebook.change-kernel",
@@ -24,6 +44,10 @@
       {
         "command": "simple-jupyter-notebook.restart-kernel",
         "title": "Simple Jupyter Notebook: Restart Kernel"
+      },
+      {
+        "command": "simple-jupyter-notebook.startXeusDebugging",
+        "title": "Simple Jupyter Notebook: Start Xeus Debugging"
       }
     ],
     "configuration": [
@@ -81,6 +105,7 @@
     "get-port": "^5.1.1",
     "rxjs": "^6.5.5",
     "split2": "^3.1.1",
-    "zeromq": "^6.0.0-beta.6"
+    "zeromq": "^6.0.0-beta.6",
+    "vscode-debugprotocol": "1.41.0-pre.0"
   }
 }
