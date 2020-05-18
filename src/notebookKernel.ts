@@ -4,9 +4,9 @@
 
 import * as vscode from 'vscode';
 import { KernelManager } from './kernelManager';
-import * as wireProtocol from '@nteract/messaging';
 import { takeUntil, takeWhile, reduce } from 'rxjs/operators';
 import { observeCodeEvent } from './util';
+import { executeRequest, isMessageType } from './messaging';
 
 /**
  * An ultra-minimal sample provider that lets the user type in JSON, and then
@@ -36,12 +36,10 @@ export class NotebookKernel implements vscode.NotebookKernel {
       return;
     }
 
-    const outputStream = await kernel.connection
-      .sendAndReceive(wireProtocol.executeRequest(cell.source))
-      .pipe(
-        takeWhile(msg => msg.header.msg_type !== 'execute_reply', true),
-        takeUntil(observeCodeEvent(token.onCancellationRequested)),
-      );
+    const outputStream = kernel.connection.sendAndReceive(executeRequest(cell.source)).pipe(
+      takeWhile(msg => msg.header.msg_type !== 'execute_reply', true),
+      takeUntil(observeCodeEvent(token.onCancellationRequested)),
+    );
 
     const collectedMessages = outputStream
       .pipe(
@@ -57,38 +55,35 @@ export class NotebookKernel implements vscode.NotebookKernel {
 
     const kernelOutputs = outputStream
       .pipe(
-        reduce((acc: vscode.CellOutput[], msg) => {
-          switch (msg.header.msg_type) {
-            case 'display_data':
+        reduce((acc: vscode.CellOutput[], msg): vscode.CellOutput[] => {
+          if (isMessageType('display_data', msg)) {
+            return [
+              ...acc,
+              {
+                outputKind: vscode.CellOutputKind.Rich,
+                data: msg.content.data,
+              },
+            ];
+          } else if (isMessageType('error', msg)) {
+            return [
+              ...acc,
+              {
+                outputKind: vscode.CellOutputKind.Error,
+                ...msg.content,
+              },
+            ];
+          } else if (isMessageType('stream', msg)) {
+            const prev = acc[acc.length - 1];
+            const content = msg.content.text as string;
+            if (prev?.outputKind === vscode.CellOutputKind.Text) {
               return [
-                ...acc,
-                {
-                  outputKind: vscode.CellOutputKind.Rich,
-                  data: msg.content.data,
-                },
+                ...acc.slice(0, -1),
+                { outputKind: vscode.CellOutputKind.Text, text: prev.text + content },
               ];
-            case 'error':
-              return [
-                ...acc,
-                {
-                  outputKind: vscode.CellOutputKind.Error,
-                  ...msg.content,
-                },
-              ];
-            case 'stream':
-              const prev = acc[acc.length - 1];
-              const content = msg.content.text as string;
-              if (prev?.outputKind === vscode.CellOutputKind.Text) {
-                return [
-                  ...acc.slice(0, -1),
-                  { outputKind: vscode.CellOutputKind.Text, text: prev.text + content },
-                ];
-              }
-
-              return [...acc, { outputKind: vscode.CellOutputKind.Text, text: content }];
-            default:
-              return acc;
+            }
           }
+
+          return acc;
         }, []),
       )
       .toPromise();

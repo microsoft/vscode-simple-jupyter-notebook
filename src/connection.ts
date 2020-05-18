@@ -8,19 +8,16 @@ import * as zmq from 'zeromq';
 import { promises as fs } from 'fs';
 import { promiseMap } from './util';
 import * as wireProtocol from '@nteract/messaging/lib/wire-protocol';
-import { JupyterMessage, MessageType, JupyterMessageHeader } from '@nteract/messaging';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { IDisposable } from './disposable';
 import { Subject, Observable, from } from 'rxjs';
 import { ignoreElements, concat, filter } from 'rxjs/operators';
+import { JupyterMessageHeader, TypedJupyerMessage } from './messaging';
+import { MessageType as OriginalMessageType } from '@nteract/messaging';
 
 /* Interacting with the Python interface that likes lots of snake_cases: */
 /* eslint-disable @typescript-eslint/camelcase */
-
-export interface IMessageWithChannel extends wireProtocol.RawJupyterMessage {
-  channel: ReceiveChannel;
-}
 
 interface ISockets {
   key: string;
@@ -35,30 +32,30 @@ interface ISockets {
 type SendChannel = 'control' | 'shell' | 'stdin';
 type ReceiveChannel = 'control' | 'shell' | 'stdin' | 'iopub';
 
-const fromRawMessage = <MT extends MessageType = MessageType, C = unknown>(
-  channel: string,
+export type IOChannel = SendChannel | ReceiveChannel;
+
+const fromRawMessage = <MT extends OriginalMessageType, C = unknown>(
+  channel: IOChannel,
   rawMessage: wireProtocol.RawJupyterMessage<MT, C>,
-): JupyterMessage<MT, C> => {
-  return {
+): TypedJupyerMessage =>
+  (({
     ...rawMessage,
     channel,
     buffers: rawMessage.buffers ? Buffer.concat(rawMessage.buffers) : undefined,
-  };
-};
+  } as unknown) as TypedJupyerMessage);
 
-const toRawMessage = <MT extends MessageType = MessageType, C = unknown>(
-  rawMessage: JupyterMessage<MT, C>,
-): wireProtocol.RawJupyterMessage<MT, C> => {
+const toRawMessage = (rawMessage: TypedJupyerMessage): wireProtocol.RawJupyterMessage => {
   return {
     ...rawMessage,
-    parent_header: rawMessage.parent_header as JupyterMessageHeader<MT>,
+    header: rawMessage.header as JupyterMessageHeader<never>,
+    parent_header: rawMessage.parent_header as JupyterMessageHeader<OriginalMessageType>,
     buffers: rawMessage.buffers ? [Buffer.from(rawMessage.buffers)] : [],
     idents: [],
   };
 };
 
 export class Connection implements IDisposable {
-  public readonly messages = new Subject<JupyterMessage>();
+  public readonly messages = new Subject<TypedJupyerMessage>();
 
   /**
    * Establishes a new Connection listening in ports and with a connection
@@ -105,7 +102,7 @@ export class Connection implements IDisposable {
    * Sends the message and returns a string of followup messages received
    * in response to it.
    */
-  public sendAndReceive(message: JupyterMessage): Observable<JupyterMessage> {
+  public sendAndReceive(message: TypedJupyerMessage): Observable<TypedJupyerMessage> {
     return from(this.sendRaw(message)).pipe(
       ignoreElements(),
       concat(this.messages),
@@ -116,7 +113,7 @@ export class Connection implements IDisposable {
   /**
    * Sends a raw Jupyter kernel message.
    */
-  public sendRaw(message: JupyterMessage) {
+  public sendRaw(message: TypedJupyerMessage) {
     const data = wireProtocol.encode(
       toRawMessage(message),
       this.sockets.key,

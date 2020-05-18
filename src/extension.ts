@@ -10,7 +10,6 @@ import { XeusDebugAdapter } from './xeusDebugAdapter';
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
   const kernelManager = new KernelManager(
     new KernelProvider(() => [
       ...vscode.workspace
@@ -38,20 +37,32 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('simple-jupyter-notebook.startXeusDebugging', async () => {
-      if (vscode.notebook.activeNotebookEditor) {
-        vscode.debug.startDebugging(undefined, {
-          type: 'xeus',
-          name: 'xeus debugging',
-          request: 'attach',
-          __kernel: await kernelManager.getDocumentKernel(vscode.notebook.activeNotebookEditor.document)
-        });
+      const doc = vscode.notebook.activeNotebookDocument;
+      if (!doc) {
+        vscode.window.showErrorMessage('No active notebook document to debug');
+        return;
       }
+
+      await kernelManager.getDocumentKernel(doc); // ensure the kernel is running
+
+      vscode.debug.startDebugging(undefined, {
+        type: 'xeus',
+        name: 'xeus debugging',
+        request: 'attach',
+        __document: doc.uri.toString(),
+      });
     }),
     vscode.debug.registerDebugAdapterDescriptorFactory('xeus', {
-      createDebugAdapterDescriptor: (session, _executable) => {
-         return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter((<any>session.configuration).__kernel));
-      }
-    })
+      createDebugAdapterDescriptor: async session => {
+        const kernel = await kernelManager.getDocumentKernelByUri(session.configuration.__document);
+        if (!kernel) {
+          vscode.window.showErrorMessage('Kernel appears to have been stopped');
+          return;
+        }
+
+        return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter(kernel));
+      },
+    }),
   );
 }
 

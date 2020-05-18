@@ -13,7 +13,30 @@ export class KernelManager implements IDisposable {
   constructor(
     private readonly provider: KernelProvider,
     private readonly context: vscode.ExtensionContext,
-  ) {}
+  ) {
+    vscode.notebook.onDidCloseNotebookDocument(document => {
+      const kernel = this.activeConns.get(document);
+      if (!kernel) {
+        return;
+      }
+
+      this.activeConns.delete(document);
+      kernel.then(k => k?.dispose());
+    });
+  }
+
+  /**
+   * Gets the kernel for a notebook document by the document URI.
+   */
+  public async getDocumentKernelByUri(uri: string) {
+    for (const [document, kernel] of this.activeConns.entries()) {
+      if (document.uri.toString() === uri) {
+        return kernel;
+      }
+    }
+
+    return undefined;
+  }
 
   /**
    * Get a kernel for the given notebook document.
