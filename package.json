@@ -20,20 +20,7 @@
     "debuggers": [
       {
         "type": "xeus",
-        "label": "xeus Debug",
-        "configurationAttributes": {
-          "attach": {
-            "required": [
-              "port"
-            ],
-            "properties": {
-              "port": {
-                "type": "number",
-                "description": "debug port."
-              }
-            }
-          }
-        }
+        "label": "xeus Debug"
       }
     ],
     "commands": [

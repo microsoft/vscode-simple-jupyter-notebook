@@ -37,19 +37,21 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.debug.registerDebugAdapterDescriptorFactory('xeus', {
-      createDebugAdapterDescriptor: (session, _executable) => {
-        return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter(session));
+    vscode.commands.registerCommand('simple-jupyter-notebook.startXeusDebugging', async () => {
+      if (vscode.notebook.activeNotebookEditor) {
+        vscode.debug.startDebugging(undefined, {
+          type: 'xeus',
+          name: 'xeus debugging',
+          request: 'attach',
+          __kernel: await kernelManager.getDocumentKernel(vscode.notebook.activeNotebookEditor.document)
+        });
       }
     }),
-    vscode.commands.registerCommand('simple-jupyter-notebook.startXeusDebugging', () =>
-      vscode.debug.startDebugging(undefined, {
-        type: 'xeus',
-        name: 'xeus debugging',
-        request: 'attach',
-        port: 12345
-      })
-    )
+    vscode.debug.registerDebugAdapterDescriptorFactory('xeus', {
+      createDebugAdapterDescriptor: (session, _executable) => {
+         return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter((<any>session.configuration).__kernel));
+      }
+    })
   );
 }
 
