@@ -112,7 +112,7 @@ export class KernelProvider {
       }
     }
 
-    return uniqueBy(await Promise.all(specs), spec => spec.id);
+    return uniqueBy(specs, spec => spec.id);
   }
 
   /**
