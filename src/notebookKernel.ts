@@ -73,12 +73,18 @@ export class NotebookKernel implements vscode.NotebookKernel {
               },
             ];
           } else if (isMessageType('stream', msg)) {
-            const prev = acc[acc.length - 1];
             const content = msg.content.text as string;
-            if (prev?.outputKind === vscode.CellOutputKind.Text) {
+            if (acc.length > 0) {
+              const prev = acc[acc.length - 1];
+              if (prev?.outputKind === vscode.CellOutputKind.Text) {
+                return [
+                  ...acc.slice(0, -1),
+                  { outputKind: vscode.CellOutputKind.Text, text: prev.text + content },
+                ];
+              }
+            } else {
               return [
-                ...acc.slice(0, -1),
-                { outputKind: vscode.CellOutputKind.Text, text: prev.text + content },
+                { outputKind: vscode.CellOutputKind.Text, text: content },
               ];
             }
           }
