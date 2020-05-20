@@ -24,9 +24,8 @@ const isDebugMessage = (msg: JupyterMessage): msg is DebugMessage =>
   debugEvents.has(msg.header.msg_type);
 
 /**
- * the XeusDebugAdapter needs to be connected to:
- * - Jupyter's debug_request and debug_reply requests sent to the Control channel
- * - Jupyter's debug_event received from the IOPub channel
+ * the XeusDebugAdapter delegates the DAP protocol to the xeus kernel
+ * via Jupyter's experimental debug_request, debug_reply, debug_event messages.
  */
 export class XeusDebugAdapter implements vscode.DebugAdapter {
 
