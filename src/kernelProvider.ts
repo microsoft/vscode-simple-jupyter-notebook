@@ -30,6 +30,7 @@ export const enum LocationType {
 export interface IRunningKernel extends IDisposable {
   connection: Connection;
   process: KernelProcess;
+  isDebugging: boolean;
 }
 
 export interface IKernelSpecSearchPath {
@@ -131,6 +132,7 @@ export class KernelProvider {
     return {
       connection,
       process,
+      isDebugging: false,
       dispose: () => {
         connection.dispose();
         process.dispose();

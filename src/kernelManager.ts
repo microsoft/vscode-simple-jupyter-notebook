@@ -39,6 +39,19 @@ export class KernelManager implements IDisposable {
   }
 
   /**
+   * Gets the notebook document by the document URI.
+   */
+  public getDocumentByUri(uri: string) {
+    for (const [document, kernel] of this.activeConns.entries()) {
+      if (document.uri.toString() === uri) {
+        return document;
+      }
+    }
+
+    return undefined;
+  }
+
+  /**
    * Get a kernel for the given notebook document.
    */
   public async getDocumentKernel(document: vscode.NotebookDocument) {

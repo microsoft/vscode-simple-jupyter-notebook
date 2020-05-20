@@ -17,7 +17,7 @@ export class NotebookKernel implements vscode.NotebookKernel {
 
   public label = 'Simple Kernel';
 
-  constructor(private readonly kernels: KernelManager) {}
+  constructor(private readonly kernels: KernelManager) { }
 
   /**
    * @inheritdoc

@@ -17,6 +17,11 @@
   ],
   "enableProposedApi": true,
   "contributes": {
+    "breakpoints": [
+      {
+        "language": "python"
+      }
+    ],
     "debuggers": [
       {
         "type": "xeus",
@@ -33,10 +38,20 @@
         "title": "Simple Jupyter Notebook: Restart Kernel"
       },
       {
-        "command": "simple-jupyter-notebook.startXeusDebugging",
-        "title": "Simple Jupyter Notebook: Start Xeus Debugging"
+        "command": "simple-jupyter-notebook.toggleDebugging",
+        "title": "Toggle Debugging",
+        "icon": "$(bug)"
       }
     ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "simple-jupyter-notebook.toggleDebugging",
+          "when": "notebookEditorFocused",
+          "group": "navigation@1"
+        }
+      ]
+    },
     "configuration": [
       {
         "title": "Simple Jupyter Kernels",
@@ -85,7 +100,8 @@
     "mocha": "^7.1.2",
     "prettier": "^2.0.5",
     "typescript": "^3.8.3",
-    "vscode-test": "^1.3.0"
+    "vscode-test": "^1.3.0",
+    "vscode-dts": "^0.3.1"
   },
   "dependencies": {
     "@nteract/messaging": "^7.0.6",
