@@ -103,20 +103,19 @@ export class XeusDebugAdapter implements vscode.DebugAdapter {
    * Dump content of given cell into a tmp file and return path to file.
    */
   private async dumpCell(uri: string): Promise<string | undefined> {
-    if (!this.cellToFile.has(uri)) {
-      for (let cell of this.notebookDocument.cells) {
-        if (cell.uri.toString() === uri) {
-          try {
-            const response = await this.session.customRequest('dumpCell', { code: cell.source });
-            this.fileToCell.set(response.sourcePath, cell.uri.toString());
-            this.cellToFile.set(cell.uri.toString(), response.sourcePath);
-            return response.sourcePath;
-          } catch (err) {
-            console.log(err);
-          }
+    //if (!this.cellToFile.has(uri)) {
+      const cell = this.notebookDocument.cells.find(c => c.uri.toString() === uri);
+      if (cell) {
+        try {
+          const response = await this.session.customRequest('dumpCell', { code: cell.source });
+          this.fileToCell.set(response.sourcePath, cell.uri.toString());
+          this.cellToFile.set(cell.uri.toString(), response.sourcePath);
+          return response.sourcePath;
+        } catch (err) {
+          console.log(err);
         }
       }
-    }
+    //}
   }
 }
 

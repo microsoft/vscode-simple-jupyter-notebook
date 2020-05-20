@@ -75,6 +75,7 @@ export function activate(context: vscode.ExtensionContext) {
           type: 'xeus',
           name: 'xeus debugging',
           request: 'attach',
+          internalConsoleOptions: 'neverOpen',
           __document: doc.uri.toString(),
         });
       } else {
