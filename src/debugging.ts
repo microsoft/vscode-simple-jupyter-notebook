@@ -1,6 +1,7 @@
 /*---------------------------------------------------------
  * Copyright (C) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------*/
+
 import * as vscode from 'vscode';
 import { KernelManager } from './kernelManager';
 import { DebugProtocol } from 'vscode-debugprotocol';
@@ -8,97 +9,91 @@ import { IRunningKernel } from './kernelProvider';
 import { debugRequest, debugResponse, MessageType, JupyterMessage, DebugMessage } from './messaging';
 import { filter, tap } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
+import * as path from 'path';
 
 
 export class DebuggingManager {
 
-  private docsToSessions = new Map<vscode.NotebookDocument, Promise<vscode.DebugSession>>();
+  private docsToSessionInfo = new Map<vscode.NotebookDocument, SessionInfo>();
 
   public constructor(
     context: vscode.ExtensionContext,
     private kernelManager: KernelManager
   ) {
 
-    // track termination of debug sessions
-    context.subscriptions.push(vscode.debug.onDidTerminateDebugSession(async session => {
-      for (const [doc, ses] of this.docsToSessions.entries()) {
-        if (session === await ses) {
-          this.docsToSessions.delete(doc);
-          this.updateDebuggerUI(doc, false);
-          break;
-        }
-      }
-    }));
+    context.subscriptions.push(
 
-    // track closing of notebooks documents
-    vscode.notebook.onDidCloseNotebookDocument(async document => {
-      const session = await this.docsToSessions.get(document);
-      if (session) {
-        this.docsToSessions.delete(document);
-        await this.stop(session);
-      }
-    });
+      // track termination of debug sessions
+      vscode.debug.onDidTerminateDebugSession(async session => {
+        for (const [doc, info] of this.docsToSessionInfo.entries()) {
+          if (session === await info.session) {
+            this.docsToSessionInfo.delete(doc);
+            this.updateDebuggerUI(doc, false);
+            break;
+          }
+        }
+      }),
+
+      // track closing of notebooks documents
+      vscode.notebook.onDidCloseNotebookDocument(async document => {
+        const info = this.docsToSessionInfo.get(document);
+        if (info) {
+          this.docsToSessionInfo.delete(document);
+          await info.stop();
+        }
+      }),
+
+      // factory for xeus debug adapters
+      vscode.debug.registerDebugAdapterDescriptorFactory('xeus', {
+        createDebugAdapterDescriptor: async session => {
+          const info = this.getSessionInfoByUri(session.configuration.__document);
+          if (info) {
+            const kernel = await this.kernelManager.getDocumentKernel(info.document);
+            if (kernel) {
+              info.resolve(session);
+              return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter(session, info.document, kernel));
+            } else {
+              info.reject(new Error('Kernel appears to have been stopped'));
+            }
+          }
+          // should not happen
+          return;
+        }
+      })
+    );
   }
 
   public async toggleDebugging(doc: vscode.NotebookDocument) {
 
-    let session = this.docsToSessions.get(doc);
-    if (session) {
+    let showBreakpointMargin = false;
+    let info = this.docsToSessionInfo.get(doc);
+    if (info) {
       // we are in debugging mode
-      this.docsToSessions.delete(doc);
-      await this.stop(await session);
+      this.docsToSessionInfo.delete(doc);
+      await info.stop();
     } else {
-      session = this.startDebugSession(doc);
-      this.docsToSessions.set(doc, session);
+      const info = new SessionInfo(doc);
+      this.docsToSessionInfo.set(doc, info);
       await this.kernelManager.getDocumentKernel(doc); // ensure the kernel is running
-      await session;
+      try {
+        await info.session;
+        showBreakpointMargin = true;
+      } catch (err) {
+        vscode.window.showErrorMessage(`Can't start debugging (${err})`);
+      }
+      this.updateDebuggerUI(doc, showBreakpointMargin);
     }
-    this.updateDebuggerUI(doc, this.docsToSessions.has(doc));
   }
 
   //---- private
 
-  private async startDebugSession(doc: vscode.NotebookDocument): Promise<vscode.DebugSession> {
-
-    return new Promise<vscode.DebugSession>((resolve, reject) => {
-
-      const timer = setTimeout(() => {
-        reject(new Error('Cannot start debugger within 10 seconds'));
-      }, 10000);
-
-      const factoryDisposer = vscode.debug.registerDebugAdapterDescriptorFactory('xeus', {
-        createDebugAdapterDescriptor: async session => {
-
-          factoryDisposer.dispose();
-
-          const kernel = await this.kernelManager.getDocumentKernelByUri(session.configuration.__document);
-          const notebookDocument = this.kernelManager.getDocumentByUri(session.configuration.__document);
-          if (kernel && notebookDocument) {
-            clearTimeout(timer);
-            resolve(session);
-            return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter(session, notebookDocument, kernel));
-          }
-          clearTimeout(timer);
-          reject(new Error('Kernel appears to have been stopped'));
-          return;
-        }
-      });
-
-      vscode.debug.startDebugging(undefined, {
-        type: 'xeus',
-        name: 'xeus debugging',
-        request: 'attach',
-        __document: doc.uri.toString(),
-      });
-    });
-  }
-
-  private stop(session: vscode.DebugSession) {
-    if (vscode.debug.activeDebugSession === session) {
-      return vscode.commands.executeCommand('workbench.action.debug.stop');
-    } else {
-      console.log('cannot stop debugger');
+  private getSessionInfoByUri(docUri: string): SessionInfo | undefined {
+    for (const [doc, info] of this.docsToSessionInfo.entries()) {
+      if (docUri === doc.uri.toString()) {
+        return info;
+      }
     }
+    return undefined;
   }
 
   private updateDebuggerUI(doc: vscode.NotebookDocument, showBreakpointsMargin: boolean) {
@@ -106,6 +101,49 @@ export class DebuggingManager {
       if (cell.cellKind === vscode.CellKind.Code) {
         cell.metadata.breakpointMargin = showBreakpointsMargin;
       }
+    }
+  }
+}
+
+class SessionInfo {
+
+  private resolveFunc?: (value: vscode.DebugSession) => void;
+  private rejectFunc?: (reason?: any) => void;
+
+  readonly session: Promise<vscode.DebugSession>;
+
+  constructor(public readonly document: vscode.NotebookDocument) {
+    this.session = new Promise<vscode.DebugSession>((resolve, reject) => {
+
+      this.resolveFunc = resolve;
+      this.rejectFunc = reject;
+
+      vscode.debug.startDebugging(undefined, {
+        type: 'xeus',
+        name: `${path.basename(document.fileName)}`,
+        request: 'attach',
+        __document: document.uri.toString(),
+      }).then(undefined, reject);
+    });
+  }
+
+  resolve(session: vscode.DebugSession) {
+    if (this.resolveFunc) {
+      this.resolveFunc(session);
+    }
+  }
+
+  reject(reason: any) {
+    if (this.rejectFunc) {
+      this.rejectFunc(reason);
+    }
+  }
+
+  async stop() {
+    if (vscode.debug.activeDebugSession === await this.session) {
+      return vscode.commands.executeCommand('workbench.action.debug.stop');
+    } else {
+      console.log('cannot stop debugger');
     }
   }
 }
@@ -172,7 +210,7 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
     }
 
     // map Source paths from VS Code to Xeus
-    visitSources(message, s => {
+    visitSources(message, async s => {
       if (s && s.path) {
         const p = this.cellToFile.get(s.path);
         if (p) {
@@ -200,19 +238,17 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
    * Dump content of given cell into a tmp file and return path to file.
    */
   private async dumpCell(uri: string): Promise<string | undefined> {
-    //if (!this.cellToFile.has(uri)) {
-      const cell = this.notebookDocument.cells.find(c => c.uri.toString() === uri);
-      if (cell) {
-        try {
-          const response = await this.session.customRequest('dumpCell', { code: cell.source });
-          this.fileToCell.set(response.sourcePath, cell.uri.toString());
-          this.cellToFile.set(cell.uri.toString(), response.sourcePath);
-          return response.sourcePath;
-        } catch (err) {
-          console.log(err);
-        }
+    const cell = this.notebookDocument.cells.find(c => c.uri.toString() === uri);
+    if (cell) {
+      try {
+        const response = await this.session.customRequest('dumpCell', { code: cell.source });
+        this.fileToCell.set(response.sourcePath, cell.uri.toString());
+        this.cellToFile.set(cell.uri.toString(), response.sourcePath);
+        return response.sourcePath;
+      } catch (err) {
+        console.log(err);
       }
-    //}
+    }
   }
 }
 
