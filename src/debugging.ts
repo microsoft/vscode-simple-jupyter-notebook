@@ -14,7 +14,7 @@ import * as path from 'path';
 
 export class DebuggingManager {
 
-  private docsToSessionInfo = new Map<vscode.NotebookDocument, SessionInfo>();
+  private docsToDebugger = new Map<vscode.NotebookDocument, Debugger>();
 
   public constructor(
     context: vscode.ExtensionContext,
@@ -25,9 +25,9 @@ export class DebuggingManager {
 
       // track termination of debug sessions
       vscode.debug.onDidTerminateDebugSession(async session => {
-        for (const [doc, info] of this.docsToSessionInfo.entries()) {
-          if (session === await info.session) {
-            this.docsToSessionInfo.delete(doc);
+        for (const [doc, dbg] of this.docsToDebugger.entries()) {
+          if (session === await dbg.session) {
+            this.docsToDebugger.delete(doc);
             this.updateDebuggerUI(doc, false);
             break;
           }
@@ -36,24 +36,24 @@ export class DebuggingManager {
 
       // track closing of notebooks documents
       vscode.notebook.onDidCloseNotebookDocument(async document => {
-        const info = this.docsToSessionInfo.get(document);
-        if (info) {
-          this.docsToSessionInfo.delete(document);
-          await info.stop();
+        const dbg = this.docsToDebugger.get(document);
+        if (dbg) {
+          this.docsToDebugger.delete(document);
+          await dbg.stop();
         }
       }),
 
       // factory for xeus debug adapters
       vscode.debug.registerDebugAdapterDescriptorFactory('xeus', {
         createDebugAdapterDescriptor: async session => {
-          const info = this.getSessionInfoByUri(session.configuration.__document);
-          if (info) {
-            const kernel = await this.kernelManager.getDocumentKernel(info.document);
+          const dbg = this.getDebuggerByUri(session.configuration.__document);
+          if (dbg) {
+            const kernel = await this.kernelManager.getDocumentKernel(dbg.document);
             if (kernel) {
-              info.resolve(session);
-              return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter(session, info.document, kernel));
+              dbg.resolve(session);
+              return new vscode.DebugAdapterInlineImplementation(new XeusDebugAdapter(session, dbg.document, kernel));
             } else {
-              info.reject(new Error('Kernel appears to have been stopped'));
+              dbg.reject(new Error('Kernel appears to have been stopped'));
             }
           }
           // should not happen
@@ -66,16 +66,16 @@ export class DebuggingManager {
   public async toggleDebugging(doc: vscode.NotebookDocument) {
 
     let showBreakpointMargin = false;
-    let info = this.docsToSessionInfo.get(doc);
-    if (info) {
-      this.docsToSessionInfo.delete(doc);
-      await info.stop();
+    let dbg = this.docsToDebugger.get(doc);
+    if (dbg) {
+      this.docsToDebugger.delete(doc);
+      await dbg.stop();
     } else {
-      const info = new SessionInfo(doc);
-      this.docsToSessionInfo.set(doc, info);
+      dbg = new Debugger(doc);
+      this.docsToDebugger.set(doc, dbg);
       await this.kernelManager.getDocumentKernel(doc); // ensure the kernel is running
       try {
-        await info.session;
+        await dbg.session;
         showBreakpointMargin = true;
       } catch (err) {
         vscode.window.showErrorMessage(`Can't start debugging (${err})`);
@@ -86,10 +86,10 @@ export class DebuggingManager {
 
   //---- private
 
-  private getSessionInfoByUri(docUri: string): SessionInfo | undefined {
-    for (const [doc, info] of this.docsToSessionInfo.entries()) {
+  private getDebuggerByUri(docUri: string): Debugger | undefined {
+    for (const [doc, dbg] of this.docsToDebugger.entries()) {
       if (docUri === doc.uri.toString()) {
-        return info;
+        return dbg;
       }
     }
     return undefined;
@@ -104,7 +104,7 @@ export class DebuggingManager {
   }
 }
 
-class SessionInfo {
+class Debugger {
 
   private resolveFunc?: (value: vscode.DebugSession) => void;
   private rejectFunc?: (reason?: any) => void;
@@ -188,6 +188,10 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
           if (s && s.path) {
             const p = this.fileToCell.get(s.path);
             if (p) {
+              const uri = vscode.Uri.parse(p);
+              if (uri && uri.fragment) {
+                s.name = `${path.basename(uri.path)}, Cell ${uri.fragment}`;
+              }
               s.path = p;
             }
           }
