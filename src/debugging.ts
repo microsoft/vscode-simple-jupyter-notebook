@@ -68,7 +68,6 @@ export class DebuggingManager {
     let showBreakpointMargin = false;
     let info = this.docsToSessionInfo.get(doc);
     if (info) {
-      // we are in debugging mode
       this.docsToSessionInfo.delete(doc);
       await info.stop();
     } else {
@@ -210,7 +209,7 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
     }
 
     // map Source paths from VS Code to Xeus
-    visitSources(message, async s => {
+    visitSources(message, s => {
       if (s && s.path) {
         const p = this.cellToFile.get(s.path);
         if (p) {
@@ -286,9 +285,6 @@ function visitSources(msg: DebugProtocol.ProtocolMessage, sourceHook: (source: D
           break;
         case 'gotoTargets':
           sourceHook((<DebugProtocol.GotoTargetsArguments>request.arguments).source);
-          break;
-        case 'launchVSCode':
-          //request.arguments.args.forEach(arg => fixSourcePath(arg));
           break;
         default:
           break;
