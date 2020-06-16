@@ -1,7 +1,3 @@
-// A launch configuration that compiles the extension and then opens it inside a new window
-// Use IntelliSense to learn about possible attributes.
-// Hover to view descriptions of existing attributes.
-// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
 {
 	"version": "0.2.0",
 	"configurations": [
@@ -21,7 +17,7 @@
 			},
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js",
-				"${workspaceFolder}/../notebook-extension-samples/**/*.js",
+				"${workspaceFolder}/../notebook-extension-samples/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
 		},
@@ -38,6 +34,12 @@
 				"${workspaceFolder}/out/test/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
+		},
+		{
+			"type": "pwa-node-terminal",
+			"name": "Create JavaScript Debug Terminal",
+			"request": "launch",
+			"cwd": "/Users/weinand/MS/Projects/vscode-simple-jupyter-notebook"
 		}
 	]
 }

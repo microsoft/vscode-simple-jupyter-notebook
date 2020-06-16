@@ -5,8 +5,10 @@ import * as vscode from 'vscode';
 import { NotebookKernel } from './notebookKernel';
 
 export class SampleProvider extends NotebookKernel implements vscode.NotebookContentProvider {
-  public readonly onDidChangeNotebook = new vscode.EventEmitter<vscode.NotebookDocumentEditEvent>()
-    .event;
+
+  kernel?: vscode.NotebookKernel | undefined;
+
+  public readonly onDidChangeNotebook = new vscode.EventEmitter<vscode.NotebookDocumentEditEvent>().event;
 
   /**
    * @inheritdoc
@@ -57,5 +59,13 @@ export class SampleProvider extends NotebookKernel implements vscode.NotebookCon
    */
   public async saveNotebookAs(): Promise<void> {
     return Promise.resolve(); // not implemented
+  }
+
+  revertNotebook(document: vscode.NotebookDocument, cancellation: vscode.CancellationToken): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
+  backupNotebook(document: vscode.NotebookDocument, context: vscode.NotebookDocumentBackupContext, cancellation: vscode.CancellationToken): Promise<vscode.NotebookDocumentBackup> {
+    throw new Error("Method not implemented.");
   }
 }

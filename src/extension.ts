@@ -34,9 +34,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('simple-jupyter-notebook.toggleDebugging', () => {
-      const doc = vscode.notebook.activeNotebookDocument;
-      if (doc) {
-        debuggerManager.toggleDebugging(doc);
+      const editor = vscode.notebook.activeNotebookEditor;
+      if (editor) {
+        debuggerManager.toggleDebugging(editor.document);
       } else {
         vscode.window.showErrorMessage('No active notebook document to debug');
       }

@@ -26,7 +26,7 @@ export class DebuggingManager {
       // track termination of debug sessions
       vscode.debug.onDidTerminateDebugSession(async session => {
         for (const [doc, dbg] of this.docsToDebugger.entries()) {
-          if (session === await dbg.session) {
+          if (dbg && session === await dbg.session) {
             this.docsToDebugger.delete(doc);
             this.updateDebuggerUI(doc, false);
             break;
@@ -38,7 +38,6 @@ export class DebuggingManager {
       vscode.notebook.onDidCloseNotebookDocument(async document => {
         const dbg = this.docsToDebugger.get(document);
         if (dbg) {
-          this.docsToDebugger.delete(document);
           await dbg.stop();
         }
       }),
@@ -68,7 +67,6 @@ export class DebuggingManager {
     let showBreakpointMargin = false;
     let dbg = this.docsToDebugger.get(doc);
     if (dbg) {
-      this.docsToDebugger.delete(doc);
       await dbg.stop();
     } else {
       dbg = new Debugger(doc);
@@ -147,6 +145,7 @@ class Debugger {
   }
 }
 
+
 //---- debug adapter for Jupyter debug protocol
 
 const debugEvents: ReadonlySet<MessageType> = new Set([
@@ -190,7 +189,8 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
             if (p) {
               const uri = vscode.Uri.parse(p);
               if (uri && uri.fragment) {
-                s.name = `${path.basename(uri.path)}, Cell ${uri.fragment}`;
+                const cellNo = parseInt(uri.fragment);
+                s.name = `${path.basename(uri.path)}, Cell ${cellNo.toString()}`;
               }
               s.path = p;
             }
@@ -244,7 +244,7 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
     const cell = this.notebookDocument.cells.find(c => c.uri.toString() === uri);
     if (cell) {
       try {
-        const response = await this.session.customRequest('dumpCell', { code: cell.source });
+        const response = await this.session.customRequest('dumpCell', { code: cell.document.getText() });
         this.fileToCell.set(response.sourcePath, cell.uri.toString());
         this.cellToFile.set(cell.uri.toString(), response.sourcePath);
         return response.sourcePath;

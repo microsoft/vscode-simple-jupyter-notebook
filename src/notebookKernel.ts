@@ -36,7 +36,7 @@ export class NotebookKernel implements vscode.NotebookKernel {
       return;
     }
 
-    const outputStream = kernel.connection.sendAndReceive(executeRequest(cell.source)).pipe(
+    const outputStream = kernel.connection.sendAndReceive(executeRequest(cell.document.getText())).pipe(
       takeWhile(msg => msg.header.msg_type !== 'execute_reply', true),
       takeUntil(observeCodeEvent(token.onCancellationRequested)),
     );
