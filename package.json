@@ -11,6 +11,7 @@
   ],
   "activationEvents": [
     "*",
+    "onNotebookEditor:jupyter",
     "onCommand:simple-jupyter-notebook.change-kernel",
     "onCommand:simple-jupyter-notebook.restart-kernel",
     "onDebug:xeus"
@@ -26,6 +27,18 @@
       {
         "type": "xeus",
         "label": "xeus Debug"
+      }
+    ],
+    "notebookProvider": [
+      {
+        "viewType": "jupyter",
+        "displayName": "Jupyter",
+        "selector": [
+          {
+            "filenamePattern": "*.ipynb",
+            "excludeFileNamePattern": "*.test.ipynb"
+          }
+        ]
       }
     ],
     "commands": [

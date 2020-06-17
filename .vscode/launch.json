@@ -8,16 +8,13 @@
 			"runtimeExecutable": "${execPath}",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--extensionDevelopmentPath=${workspaceFolder}/../notebook-extension-samples/notebook-renderer",
-				"--extensionDevelopmentPath=${workspaceFolder}/../notebook-extension-samples/notebook-provider",
 				"${workspaceFolder}/samplenotebooks"
 			],
 			"env": {
 				"CONDA_PREFIX": "/opt/conda"
 			},
 			"outFiles": [
-				"${workspaceFolder}/out/**/*.js",
-				"${workspaceFolder}/../notebook-extension-samples/**/*.js"
+				"${workspaceFolder}/out/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
 		},
@@ -34,12 +31,6 @@
 				"${workspaceFolder}/out/test/**/*.js"
 			],
 			"preLaunchTask": "${defaultBuildTask}"
-		},
-		{
-			"type": "pwa-node-terminal",
-			"name": "Create JavaScript Debug Terminal",
-			"request": "launch",
-			"cwd": "/Users/weinand/MS/Projects/vscode-simple-jupyter-notebook"
 		}
 	]
 }
