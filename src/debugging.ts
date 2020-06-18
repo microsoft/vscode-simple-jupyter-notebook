@@ -11,7 +11,6 @@ import { filter, tap } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import * as path from 'path';
 
-
 export class DebuggingManager {
 
   private docsToDebugger = new Map<vscode.NotebookDocument, Debugger>();
@@ -20,6 +19,8 @@ export class DebuggingManager {
     context: vscode.ExtensionContext,
     private kernelManager: KernelManager
   ) {
+
+    vscode.debug.breakpoints;   // start to fetch breakpoints
 
     context.subscriptions.push(
 
@@ -40,6 +41,7 @@ export class DebuggingManager {
         if (dbg) {
           await dbg.stop();
         }
+        this.fixBreakpoints(document);
       }),
 
       // factory for xeus debug adapters
@@ -60,6 +62,32 @@ export class DebuggingManager {
         }
       })
     );
+  }
+
+  private fixBreakpoints(doc: vscode.NotebookDocument) {
+
+    const map = new Map<string, vscode.Uri>();
+
+    doc.cells.forEach((cell, ix) => {
+      const pos = parseInt(cell.uri.fragment);
+      if (pos !== ix) {
+        map.set(cell.uri.toString(), cell.uri.with({ fragment: ix.toString().padStart(8, '0') }));
+      }
+    });
+
+    if (map.size > 0) {
+      for (let b of vscode.debug.breakpoints) {
+        if (b instanceof vscode.SourceBreakpoint) {
+          const s = map.get(b.location.uri.toString());
+          if (s) {
+            // update breakpoint location
+
+            //b.location = new vscode.Location(s, b.location.range);
+          }
+        }
+      }
+    }
+
   }
 
   public async toggleDebugging(doc: vscode.NotebookDocument) {
@@ -163,7 +191,7 @@ const isDebugMessage = (msg: JupyterMessage): msg is DebugMessage =>
  */
 class XeusDebugAdapter implements vscode.DebugAdapter {
 
-  private readonly fileToCell = new Map<string, string>();
+  private readonly fileToCell = new Map<string, vscode.NotebookCell>();
   private readonly cellToFile = new Map<string, string>();
   private readonly sendMessage = new vscode.EventEmitter<vscode.DebugProtocolMessage>();
   private readonly messageListener: Subscription;
@@ -185,14 +213,14 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
         // map Sources from Xeus to VS Code
         visitSources(evt.content, s => {
           if (s && s.path) {
-            const p = this.fileToCell.get(s.path);
-            if (p) {
-              const uri = vscode.Uri.parse(p);
-              if (uri && uri.fragment) {
-                const cellNo = parseInt(uri.fragment);
-                s.name = `${path.basename(uri.path)}, Cell ${cellNo.toString()}`;
+            const cell = this.fileToCell.get(s.path);
+            if (cell) {
+              s.name = path.basename(cell.uri.path);
+              const index = cell.notebook.cells.indexOf(cell);
+              if (index >= 0) {
+                s.name += `, Cell ${index+1}`;
               }
-              s.path = p;
+              s.path = cell.uri.toString();
             }
           }
         });
@@ -245,7 +273,7 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
     if (cell) {
       try {
         const response = await this.session.customRequest('dumpCell', { code: cell.document.getText() });
-        this.fileToCell.set(response.sourcePath, cell.uri.toString());
+        this.fileToCell.set(response.sourcePath, cell);
         this.cellToFile.set(cell.uri.toString(), response.sourcePath);
         return response.sourcePath;
       } catch (err) {
