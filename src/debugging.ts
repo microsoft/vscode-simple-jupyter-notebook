@@ -13,7 +13,7 @@ import * as path from 'path';
 
 export class DebuggingManager {
 
-  private docsToDebugger = new Map<vscode.NotebookDocument, Debugger>();
+  private notebookToDebugger = new Map<vscode.NotebookDocument, Debugger>();
 
   public constructor(
     context: vscode.ExtensionContext,
@@ -26,9 +26,9 @@ export class DebuggingManager {
 
       // track termination of debug sessions
       vscode.debug.onDidTerminateDebugSession(async session => {
-        for (const [doc, dbg] of this.docsToDebugger.entries()) {
+        for (const [doc, dbg] of this.notebookToDebugger.entries()) {
           if (dbg && session === await dbg.session) {
-            this.docsToDebugger.delete(doc);
+            this.notebookToDebugger.delete(doc);
             this.updateDebuggerUI(doc, false);
             break;
           }
@@ -37,7 +37,7 @@ export class DebuggingManager {
 
       // track closing of notebooks documents
       vscode.notebook.onDidCloseNotebookDocument(async document => {
-        const dbg = this.docsToDebugger.get(document);
+        const dbg = this.notebookToDebugger.get(document);
         if (dbg) {
           await dbg.stop();
         }
@@ -76,15 +76,23 @@ export class DebuggingManager {
     });
 
     if (map.size > 0) {
+      const addBpts: vscode.SourceBreakpoint[] = [];
+      const removeBpt: vscode.SourceBreakpoint[] = [];
       for (let b of vscode.debug.breakpoints) {
         if (b instanceof vscode.SourceBreakpoint) {
           const s = map.get(b.location.uri.toString());
           if (s) {
-            // update breakpoint location
-
-            //b.location = new vscode.Location(s, b.location.range);
+            removeBpt.push(b);
+            const loc = new vscode.Location(s, b.location.range);
+            addBpts.push(new vscode.SourceBreakpoint(loc /*, b.enabled, b.condition, b.hitCondition, b.logMessage*/));
           }
         }
+      }
+      if (removeBpt.length > 0) {
+        vscode.debug.removeBreakpoints(removeBpt);
+      }
+      if (addBpts.length > 0) {
+        vscode.debug.addBreakpoints(addBpts);
       }
     }
 
@@ -93,12 +101,12 @@ export class DebuggingManager {
   public async toggleDebugging(doc: vscode.NotebookDocument) {
 
     let showBreakpointMargin = false;
-    let dbg = this.docsToDebugger.get(doc);
+    let dbg = this.notebookToDebugger.get(doc);
     if (dbg) {
       await dbg.stop();
     } else {
       dbg = new Debugger(doc);
-      this.docsToDebugger.set(doc, dbg);
+      this.notebookToDebugger.set(doc, dbg);
       await this.kernelManager.getDocumentKernel(doc); // ensure the kernel is running
       try {
         await dbg.session;
@@ -113,7 +121,7 @@ export class DebuggingManager {
   //---- private
 
   private getDebuggerByUri(docUri: string): Debugger | undefined {
-    for (const [doc, dbg] of this.docsToDebugger.entries()) {
+    for (const [doc, dbg] of this.notebookToDebugger.entries()) {
       if (docUri === doc.uri.toString()) {
         return dbg;
       }
