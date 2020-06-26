@@ -1,4 +1,4 @@
-# simple-jupyter-notebook
+# Simple Jupyter Notebook
 
 Sample notebook implementation based on the xeus kernel.
 
@@ -18,13 +18,14 @@ In detail it shows how to:
 - Run `npm install` then `npm run watch` in this repo
 - Press F5
 
-This should open another VS Code window with a project folder containing a sample jupyter notebook.
-In this notebook you can run (evaluate) cells (without debugging).
-Or you can enable debugging mode by pressing the "bug" action in the editors toolbook.
-This shows the debug toolbar and makes the breakpoint gutter available where you can set breakpoints.
-When you now run cells, breakpoints are and you can inspect variables and datastructures in VS Code's usual debugger panes.
+This opens another VS Code window with a project folder containing a sample jupyter notebook.
+In this notebook you can edit and run (evaluate) cells without debugging.
 
-![Running and evaluating notebook cells](/Users/weinand/MS/Projects/vscode-simple-jupyter-notebook/images/debugging-cells.gif)
+Or you can enable debug mode by pressing the "bug" action in the editors toolbook.
+This shows the debug toolbar and makes the breakpoint gutter available where you can set breakpoints.
+When you now run cells, breakpoints are hit and you can inspect variables and datastructures in VS Code's usual debugger views and panes.
+
+![Running and evaluating notebook cells](images/debugging-cells.gif)
 
 If we can't find a Jupyter kernel out of the box (e.g. with some conda setup that places things in non-default paths), you can set the correct path in the `simple-jupyter.searchPaths` config key, see the [this page](https://jupyter-client.readthedocs.io/en/stable/kernels.html#kernel-specs) to get an idea of what the paths look like.
 
@@ -42,7 +43,7 @@ The xeus kernel implements the debug adapter protocol (DAP) but the DAP messages
 
 To make this protocol available as a regular VS Code debug adapter we implement a `vscode.DebugAdapter` that in the incoming direction receives Jupyter messages from the xeus kernel, unwraps the DAP message and forwards them to VS Code. In the outgoing direction it wraps the DAP messages received from VS Code as Jupyter messages and sends them to the xeus kernel.
 
-In the following `XeusDebugAdapter` implementation the `isDebugMessage` predicate checks whether a Jupyter message contains a DAP message.
+In the following `XeusDebugAdapter` implementation the `isDebugMessage` predicate checks whether a Jupyter message contains a DAP message payload.
 ```ts
 class XeusDebugAdapter implements vscode.DebugAdapter {
 
@@ -74,7 +75,7 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
 }
 ```
 
-The debugger that is available in the xeus kernel is surfaced as a VS Code debugger of type `xeus` through this static contribution in the extension's package.json.
+The debugger available in the xeus kernel is surfaced as a VS Code debugger of type `xeus` through this static contribution in the extension's `package.json`:
 
 ```
   "debuggers": [
