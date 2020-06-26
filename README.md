@@ -129,7 +129,7 @@ This mapping is implemented in the `XeusDebugAdapter` because that's the central
   private readonly fileToCell = new Map<string, vscode.NotebookCell>();
 ```
 
-To apply the mapping we have to find all places in the DAP protocol where file paths are used. These places are all represented by the `DebugProtocol.Source` interface and the utility function `visitSources` can be used to "visit" those places and perform the mapping (since the the `visitSources` function depends heavily on the DAP specification, it should live in the corresponding DAP mode module but now, the sample contains a copy that might be out of date).
+To apply the mapping we have to find all places in the DAP protocol where file paths are used. These places are all represented by the `DebugProtocol.Source` interface and the utility function `visitSources` can be used to "visit" those places and perform the mapping (since the `visitSources` function depends heavily on the DAP specification, it should really live in the corresponding DAP npm module, but for now this sample just contains a copy that might get out of date).
 
 With this the receiving side in the `XeusDebugAdapter` becomes this:
 ```ts
@@ -171,7 +171,7 @@ We just try to map a source path to a cell and if there is one, we use the cell'
 ```
 
 Mapping into the other direction is very similar but with a twist:
-in this case we not only have to map cell URIs to temporary file paths but we have to trigger the actual creation of the temporary files and to update the dictonaries used for the mapping.
+in this case we not only have to map cell URIs to temporary file paths but we have to trigger the actual creation of the temporary files and to update the dictionaries used for the mapping.
 
 Since xeus is a notebook kernel that supports cell debugging, xeus provides support for storing cell contents in temporary files via an extension to the Debug Adapter Protocol. The `dumpCell` request takes the contents of a cell as a string, saves it to disk, and returns a path to the file.
 
@@ -221,5 +221,5 @@ With this the outbound mapping in the `XeusDebugAdapter` becomes this:
     }
   }
 ```
-First we detect the `setBreakpoint` request where store the cell's contents in the temporary file.
-And then we use `visitSources` for the mapping.
+First we detect the `setBreakpoint` request and then we store the cell's contents in the temporary file.
+After this we use `visitSources` to perform the "cell to path" mapping.
