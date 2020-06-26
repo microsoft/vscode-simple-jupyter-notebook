@@ -122,6 +122,6 @@
     "rxjs": "^6.5.5",
     "split2": "^3.1.1",
     "zeromq": "^6.0.0-beta.6",
-    "vscode-debugprotocol": "1.41.0-pre.0"
+    "vscode-debugprotocol": "1.41.0"
   }
 }

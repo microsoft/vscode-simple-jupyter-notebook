@@ -219,16 +219,16 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
       .subscribe(evt => {
 
         // map Sources from Xeus to VS Code
-        visitSources(evt.content, s => {
-          if (s && s.path) {
-            const cell = this.fileToCell.get(s.path);
+        visitSources(evt.content, source => {
+          if (source && source.path) {
+            const cell = this.fileToCell.get(source.path);
             if (cell) {
-              s.name = path.basename(cell.uri.path);
-              const index = cell.notebook.cells.indexOf(cell);
-              if (index >= 0) {
-                s.name += `, Cell ${index+1}`;
+              source.name = path.basename(cell.uri.path);
+              const cellIndex = cell.notebook.cells.indexOf(cell);
+              if (cellIndex >= 0) {
+                source.name += `, Cell ${cellIndex+1}`;
               }
-              s.path = cell.uri.toString();
+              source.path = cell.uri.toString();
             }
           }
         });
@@ -249,11 +249,11 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
     }
 
     // map Source paths from VS Code to Xeus
-    visitSources(message, s => {
-      if (s && s.path) {
-        const p = this.cellToFile.get(s.path);
+    visitSources(message, source => {
+      if (source && source.path) {
+        const p = this.cellToFile.get(source.path);
         if (p) {
-          s.path = p;
+          source.path = p;
         }
       }
     });
@@ -276,14 +276,13 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
   /**
    * Dump content of given cell into a tmp file and return path to file.
    */
-  private async dumpCell(uri: string): Promise<string | undefined> {
+  private async dumpCell(uri: string): Promise<void> {
     const cell = this.notebookDocument.cells.find(c => c.uri.toString() === uri);
     if (cell) {
       try {
         const response = await this.session.customRequest('dumpCell', { code: cell.document.getText() });
         this.fileToCell.set(response.sourcePath, cell);
         this.cellToFile.set(cell.uri.toString(), response.sourcePath);
-        return response.sourcePath;
       } catch (err) {
         console.log(err);
       }
