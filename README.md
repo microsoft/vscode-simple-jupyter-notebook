@@ -1,10 +1,10 @@
 # Simple Jupyter Notebook
 
-Sample notebook implementation based on the xeus kernel.
+A sample notebook implementation that supports the xeus kernel.
 
 The main focus of this sample is to show how to implement notebook debugging functionality based on the xeus kernel which already supports the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) natively.
 
-In detail it shows how to:
+In detail the sample shows how to:
 - find and start the xeus kernel,
 - run (evaluate) notebook cells without debugging,
 - implement a VS Code debugger that talks to a xeus kernel and tunnels the Debug Adapter Protocol (DAP) over the Jupyter Debug Protocol,
@@ -13,12 +13,29 @@ In detail it shows how to:
 
 ## Running the sample
 
-- Install a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. Install xeus-python for example by running `conda install xeus-python -c conda-forge`
-- Clone this repository
-- Run `npm install` then `npm run watch` in this repo
-- Press F5
+We assume that you have already cloned this repository, ran `npm install` and opened the project in VS Code.
 
-This opens another VS Code window with a project folder containing a sample jupyter notebook.
+In order to use cell debugging you will need a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. You can either install xeus-python locally (which might interfere with your Python installation in undesired ways) or you can run the extension remotely in a preconfigured Docker container that will have everything you need.
+
+### Running sample in Docker Container
+
+- Make sure that Docker is running
+- Make sure to have the VS Code "Remote Development" extension installed
+- In VS Code click on the left green area in the status bar and from the Quickpick select the "Remote-Containers: Reopen in Container" command.
+This will create and start a Docker image with all prereqs and open the extension project remotely in Docker.
+
+### Running sample locally
+
+- Install xeus-python for example by running something like `conda install xeus-python -c conda-forge`
+
+Now you are done with either of these setups.
+
+Pressing "F5" opens another VS Code window with a project folder containing a sample Jupyter notebook.
+
+Before doing anything with this notebook, press F1 and type "kernel". Run the `Simple Jupyter Notebook: Change Kernel` command. The resulting Quickpick lists the kernels discovered on your machine and should show an **xpython** entry that represents the xeus-python kernel. Select that entry.
+
+If there is no xpython entry that's an indication that we can't find a Jupyter kernel out of the box (e.g. with some conda setup that places things in non-default paths), you can set the correct path in the `simple-jupyter.searchPaths` config key, see the [this page](https://jupyter-client.readthedocs.io/en/stable/kernels.html#kernel-specs) to get an idea of what the paths look like.
+
 In this notebook you can edit and run (evaluate) cells without debugging.
 
 Or you can enable debug mode by pressing the "bug" action in the editors toolbook.
@@ -27,9 +44,6 @@ When you now run cells, breakpoints are hit and you can inspect variables and da
 
 ![Running and evaluating notebook cells](images/debugging-cells.gif)
 
-If we can't find a Jupyter kernel out of the box (e.g. with some conda setup that places things in non-default paths), you can set the correct path in the `simple-jupyter.searchPaths` config key, see the [this page](https://jupyter-client.readthedocs.io/en/stable/kernels.html#kernel-specs) to get an idea of what the paths look like.
-
-You can use the `Simple Jupyter Notebook: Change Kernel` to select among the kernels discovered on your machine, and `Restart Kernel` to restart any running kernels.
 
 ## Implementation Notes
 

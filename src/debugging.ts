@@ -11,6 +11,9 @@ import { filter, tap } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import * as path from 'path';
 
+/**
+ * The DebuggingManager maintains the mapping between notebook documents and debug sessions.
+ */
 export class DebuggingManager {
 
   private notebookToDebugger = new Map<vscode.NotebookDocument, Debugger>();
@@ -226,7 +229,7 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
               source.name = path.basename(cell.uri.path);
               const cellIndex = cell.notebook.cells.indexOf(cell);
               if (cellIndex >= 0) {
-                source.name += `, Cell ${cellIndex+1}`;
+                source.name += `, Cell ${cellIndex + 1}`;
               }
               source.path = cell.uri.toString();
             }
