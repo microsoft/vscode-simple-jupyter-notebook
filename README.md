@@ -1,21 +1,21 @@
-# Simple Jupyter Notebook
+# Jupyter Notebook Debugging with the Xeus Kernel
 
-A sample notebook implementation that supports the xeus kernel.
+A sample notebook implementation that supports the xeus kernel and its debugging functionality.
 
-The main focus of this sample is to show how to implement notebook debugging functionality based on the xeus kernel which already supports the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/) (DAP) natively.
+The main focus of this sample is to show how to implement notebook debugging functionality based on the xeus kernel and its native support for the [Debug Adapter Protocol](https://microsoft.github.io/debug-adapter-protocol/).
 
 In detail the sample shows how to:
 - find and start the xeus kernel,
 - run (evaluate) notebook cells without debugging,
 - implement a VS Code debugger that talks to a xeus kernel and tunnels the Debug Adapter Protocol (DAP) over the Jupyter Debug Protocol,
-- intercept the DAP messages in order to map back and forth between VS Code's notebook cells and xeus's cell representation.
+- intercept DAP messages in order to map back and forth between VS Code's notebook cells and xeus's cell representation.
 
 
 ## Running the sample
 
 We assume that you have already cloned this repository, ran `npm install` and opened the project in VS Code.
 
-In order to use cell debugging you will need a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. You can either install xeus-python locally (which might interfere with your Python installation in undesired ways) or you can run the extension remotely in a preconfigured Docker container that will have everything you need.
+In order to use cell debugging you will need a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. You can either install xeus-python locally (which might interfere with your existing Python installation in undesired ways) or you can run the extension remotely in a preconfigured Docker container that will have everything you need.
 
 ### Running sample in Docker Container
 
@@ -28,19 +28,19 @@ This will create and start a Docker image with all prereqs and open the extensio
 
 - Install xeus-python for example by running something like `conda install xeus-python -c conda-forge`
 
-Now you are done with either of these setups.
+After these two alternative setups we can start working with Jupyter notebooks.
 
-Pressing "F5" opens another VS Code window with a project folder containing a sample Jupyter notebook.
+Pressing **F5** opens another VS Code window with a project folder containing a sample Jupyter notebook.
 
 Before doing anything with this notebook, press F1 and type "kernel". Run the `Simple Jupyter Notebook: Change Kernel` command. The resulting Quickpick lists the kernels discovered on your machine and should show an **xpython** entry that represents the xeus-python kernel. Select that entry.
 
 If there is no xpython entry that's an indication that we can't find a Jupyter kernel out of the box (e.g. with some conda setup that places things in non-default paths), you can set the correct path in the `simple-jupyter.searchPaths` config key, see the [this page](https://jupyter-client.readthedocs.io/en/stable/kernels.html#kernel-specs) to get an idea of what the paths look like.
 
-In this notebook you can edit and run (evaluate) cells without debugging.
+If xpython was found and set as the current kernel succesfully you can start editing the notebook and evaluating Python cells.
 
-Or you can enable debug mode by pressing the "bug" action in the editors toolbook.
-This shows the debug toolbar and makes the breakpoint gutter available where you can set breakpoints.
-When you now run cells, breakpoints are hit and you can inspect variables and datastructures in VS Code's usual debugger views and panes.
+In order to debug cells you can enable debug mode by pressing the "bug" action in the editors toolbook.
+This opens the debug toolbar and makes the breakpoint gutter available where you can set breakpoints.
+When you now evaluate cells, breakpoints are hit and you can inspect variables and datastructures in VS Code's usual debugger views and panes.
 
 ![Running and evaluating notebook cells](images/debugging-cells.gif)
 
@@ -49,7 +49,7 @@ When you now run cells, breakpoints are hit and you can inspect variables and da
 
 These notes cover only the debugging functionality of the notebook implementation which lives exclusively in the source file `debugging.ts`.
 
-The first section explains how the debugger in the xeus kernel is made available to VS Code and the second section shows how this debugger is used to debug individual notebook cells.
+The first section explains how the debugger of the xeus kernel is made available to VS Code and the second section shows how this debugger is used to debug individual notebook cells.
 
 ### Making the xeus kernel's debugger available to VS Code
 
