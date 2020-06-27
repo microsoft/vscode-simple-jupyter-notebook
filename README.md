@@ -15,13 +15,13 @@ In detail the sample shows how to:
 
 We assume that you have already cloned this repository, ran `npm install` and opened the project in VS Code.
 
-In order to use cell debugging you will need a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. You can either install xeus-python locally (which might interfere with your existing Python installation in undesired ways) or you can run the extension remotely in a preconfigured Docker container that will have everything you need.
+In order to use cell debugging you will need a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. You can either install xeus-python locally (which might interfere with your existing Python installation in undesirable ways) or you can run the extension remotely in a preconfigured Docker container that will have everything you need.
 
 ### Running sample in Docker Container
 
 - Make sure that Docker is running
 - Make sure to have the VS Code "Remote Development" extension installed
-- In VS Code click on the left green area in the status bar and from the Quickpick select the "Remote-Containers: Reopen in Container" command.
+- In VS Code click on the green area in the left side of the status bar and from the Quickpick select the "Remote-Containers: Reopen in Container" command.
 This will create and start a Docker image with all prereqs and open the extension project remotely in Docker.
 
 ### Running sample locally
@@ -47,7 +47,7 @@ When you now evaluate cells, breakpoints are hit and you can inspect variables a
 
 ## Implementation Notes
 
-These notes cover only the debugging functionality of the notebook implementation which lives exclusively in the source file `debugging.ts`.
+These notes cover only the debugging functionality of the notebook implementation which lives exclusively in the source file [`debugging.ts`](https://github.com/microsoft/vscode-simple-jupyter-notebook/blob/master/src/debugging.ts).
 
 The first section explains how the debugger of the xeus kernel is made available to VS Code and the second section shows how this debugger is used to debug individual notebook cells.
 
