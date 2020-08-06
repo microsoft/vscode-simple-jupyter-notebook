@@ -321,16 +321,18 @@ async function timeFn(fn: () => Promise<void>): Promise<number> {
 // For test
 const DELAY_EXECUTION = true;
 
-export class NotebookProvider implements vscode.NotebookContentProvider, vscode.NotebookKernel {
+export class NotebookProvider implements vscode.NotebookContentProvider {
 	private _onDidChangeNotebook = new vscode.EventEmitter<vscode.NotebookDocumentEditEvent>();
 	onDidChangeNotebook: vscode.Event<vscode.NotebookDocumentEditEvent> = this._onDidChangeNotebook.event;
 	private _notebooks: Map<string, JupyterNotebook> = new Map();
 	onDidChange: vscode.Event<void> = new vscode.EventEmitter<void>().event;
 	label: string = 'Jupyter';
-	kernel?: vscode.NotebookKernel;
 
 	constructor(private _extensionPath: string, private fillOutputs: boolean) {
-		this.kernel = this;
+	}
+
+	async resolveNotebook(document: vscode.NotebookDocument, webview: vscode.NotebookCommunication): Promise<void> {
+		return;
 	}
 
 	async openNotebook(uri: vscode.Uri): Promise<vscode.NotebookData> {
@@ -468,10 +470,10 @@ export class NotebookProvider implements vscode.NotebookContentProvider, vscode.
 
 	async backupNotebook(document: vscode.NotebookDocument, context: vscode.NotebookDocumentBackupContext, cancellation: vscode.CancellationToken): Promise<vscode.NotebookDocumentBackup> {
 		await this._save(document, context.destination, cancellation);
-		const uri = document.uri;
+		const uri = context.destination;
 
 		return {
-			id: document.uri.toString(),
+			id: uri.toString(),
 			delete: () => {
 				vscode.workspace.fs.delete(uri);
 			}

@@ -5,24 +5,50 @@
 import { IKernelSpec, KernelProvider, IRunningKernel } from './kernelProvider';
 import * as vscode from 'vscode';
 import { IDisposable } from './disposable';
+import { NotebookKernel } from './notebookKernel';
 
-export class KernelManager implements IDisposable {
+export class KernelManager implements IDisposable, vscode.NotebookKernelProvider {
   private activeSpec?: IKernelSpec;
-  private activeConns = new Map<vscode.NotebookDocument, Promise<IRunningKernel | undefined>>();
+  private activeConns = new Map<vscode.NotebookDocument, Map<string, NotebookKernel>>();
 
   constructor(
     private readonly provider: KernelProvider,
     private readonly context: vscode.ExtensionContext,
   ) {
     vscode.notebook.onDidCloseNotebookDocument(document => {
-      const kernel = this.activeConns.get(document);
-      if (!kernel) {
+      const kernelCache = this.activeConns.get(document);
+      if (!kernelCache) {
         return;
       }
 
       this.activeConns.delete(document);
-      kernel.then(k => k?.dispose());
+      kernelCache.forEach(kernel => kernel.resolve().then(k => k?.dispose()));
     });
+  }
+
+  async provideKernels(document: vscode.NotebookDocument, token: vscode.CancellationToken): Promise<vscode.NotebookKernel[]> {
+    const kernelSpecs = await this.provider.getAvailableKernels();
+    const kernelsCache = this.activeConns.get(document) || new Map<string, NotebookKernel>();
+    this.activeConns.set(document, kernelsCache);
+
+    return kernelSpecs.map(spec => {
+      const specId = `__${spec.id}__${spec.location}`;
+      if (kernelsCache.has(specId)) {
+        return kernelsCache.get(specId)!;
+      }
+
+      const kernel = new NotebookKernel(this.provider, spec);
+      kernelsCache.set(specId, kernel);
+      return kernel;
+    });
+  }
+
+  async resolveKernel(kernel: NotebookKernel, document: vscode.NotebookDocument, webview: vscode.NotebookCommunication, token: vscode.CancellationToken): Promise<void> {
+    try {
+      await kernel.resolve();
+    } catch (e) {
+      this.activeConns.get(document)?.delete(`__${kernel.kernelSpec.id}__${kernel.kernelSpec.location}`);
+    }
   }
 
   /**
@@ -54,39 +80,11 @@ export class KernelManager implements IDisposable {
   /**
    * Get a kernel for the given notebook document.
    */
-  public async getDocumentKernel(document: vscode.NotebookDocument) {
-    const existing = this.activeConns.get(document);
-    if (existing) {
-      return existing;
+  public async getDocumentKernel(document: vscode.NotebookDocument): Promise<IRunningKernel | undefined> {
+    const editor = [...vscode.notebook.visibleNotebookEditors, vscode.notebook.activeNotebookEditor].find(editor => editor?.document.uri.toString() === document.uri.toString());
+    if (editor) {
+      return (editor.kernel as NotebookKernel).resolve();
     }
-
-    const spec = await this.getActiveSpec();
-    if (!spec) {
-      return;
-    }
-
-    const kernel = this.provider
-      .launchKernel(spec)
-      .then(
-        async (instance): Promise<IRunningKernel | undefined> => {
-          // double check in case we stopped or changed kernels
-          const current = this.activeConns.get(document);
-          if (current === kernel) {
-            return instance;
-          }
-
-          instance.dispose();
-          return current; // undefined or an updated kernel
-        },
-      )
-      .catch(e => {
-        vscode.window.showErrorMessage(`Error launching kernel: ${e.stack}`);
-        this.activeConns.delete(document);
-        return undefined;
-      });
-
-    this.activeConns.set(document, kernel);
-    return await kernel;
   }
 
   /**
@@ -170,7 +168,7 @@ export class KernelManager implements IDisposable {
    * Closes all running kernels.
    */
   public closeAllKernels() {
-    this.activeConns.forEach(c => c.then(k => k?.dispose()));
+    this.activeConns.forEach(c => c.forEach(kernel => kernel.resolve().then(k => k?.dispose())));
     this.activeConns.clear();
   }
 }

@@ -21,17 +21,17 @@ export function activate(context: vscode.ExtensionContext) {
     context,
   );
 
-  const kernel = new NotebookKernel(kernelManager);
   const debuggerManager = new DebuggingManager(context, kernelManager);
 
   const provider = new NotebookProvider(context.extensionPath, true);
-  provider.kernel = kernel;
 
   context.subscriptions.push(
 
     //vscode.notebook.registerNotebookKernel('simple-jupyter-kernel', ['*'], kernel),
 
     vscode.notebook.registerNotebookContentProvider('jupyter', provider),
+
+    vscode.notebook.registerNotebookKernelProvider({ viewType: 'jupyter' }, kernelManager),
 
     vscode.commands.registerCommand('simple-jupyter-notebook.change-kernel', () =>
       kernelManager.changeActive(),
