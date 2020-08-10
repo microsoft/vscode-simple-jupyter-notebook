@@ -29,10 +29,10 @@ export type JupyterMessage<
   MT extends MessageType = MessageType,
   C = unknown,
   Channel = IOChannel
-> = Omit<nteract.JupyterMessage<never, C>, 'header' | 'channel'> & {
-  header: JupyterMessageHeader<MT>;
-  channel: Channel;
-};
+  > = Omit<nteract.JupyterMessage<never, C>, 'header' | 'channel'> & {
+    header: JupyterMessageHeader<MT>;
+    channel: Channel;
+  };
 
 /**
  * @see https://jupyter-client.readthedocs.io/en/stable/messaging.html?highlight=debug#execute
@@ -60,6 +60,18 @@ export type ExecuteReply = JupyterMessage<
     execution_count: number;
   },
   'shell'
+>;
+
+/**
+ * @see https://jupyter-client.readthedocs.io/en/stable/messaging.html?highlight=debug#update-display-data
+ */
+export type ExecuteResult = JupyterMessage<
+  'execute_result',
+  {
+    data: { [mimeType: string]: string };
+    metadata: { [key: string]: unknown };
+  },
+  'iopub'
 >;
 
 /**
@@ -156,6 +168,7 @@ export type TypedJupyerMessage =
   | DebugRequestMessage
   | ExecuteRequest
   | ExecuteReply
+  | ExecuteResult
   | DisplayData
   | ExecutionError
   | StreamOutput;

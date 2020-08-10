@@ -3,10 +3,11 @@
  *--------------------------------------------------------*/
 
 import * as vscode from 'vscode';
-import { takeUntil, takeWhile, reduce } from 'rxjs/operators';
+import { takeUntil, takeWhile, reduce, filter } from 'rxjs/operators';
 import { observeCodeEvent } from './util';
 import { executeRequest, isMessageType } from './messaging';
 import { IKernelSpec, KernelProvider, IRunningKernel } from './kernelProvider';
+import { Subject } from 'rxjs';
 
 /**
  * An ultra-minimal sample provider that lets the user type in JSON, and then
@@ -21,8 +22,7 @@ export class NotebookKernel implements vscode.NotebookKernel {
   public isPreferred: boolean;
   private _runningKernel?: IRunningKernel;
   private _resolveKernel?: Promise<IRunningKernel | undefined>;
-  private _cellCancellationTokens = new Map<vscode.NotebookCell, vscode.CancellationTokenSource>();
-  private _documentCancellationTokens = new Map<vscode.NotebookDocument, vscode.CancellationTokenSource>();
+  private _requestCancellation = new Subject<{ document?: vscode.NotebookDocument; cell?: vscode.NotebookCell }>()
 
   constructor(
     private readonly provider: KernelProvider,
@@ -62,24 +62,19 @@ export class NotebookKernel implements vscode.NotebookKernel {
     document: vscode.NotebookDocument,
     cell: vscode.NotebookCell
   ) {
-    this._cellCancellationTokens.get(cell)?.cancel();
-    const source = new vscode.CancellationTokenSource();
-    this._cellCancellationTokens.set(cell, source);
-
-    await this._executeCell(document, cell, source.token);
+    await this._executeCell(document, cell);
   }
 
   private async _executeCell(
     document: vscode.NotebookDocument,
-    cell: vscode.NotebookCell,
-    token: vscode.CancellationToken
+    cell: vscode.NotebookCell
   ): Promise<void> {
     if (cell?.language !== 'python') {
       return;
     }
 
     const kernel = await this.resolve();
-    if (!kernel || token.isCancellationRequested) {
+    if (!kernel) {
       return;
     }
 
@@ -87,7 +82,7 @@ export class NotebookKernel implements vscode.NotebookKernel {
 
     const outputStream = kernel.connection.sendAndReceive(executeRequest(cell.document.getText())).pipe(
       takeWhile(msg => msg.header.msg_type !== 'execute_reply', true),
-      takeUntil(observeCodeEvent(token.onCancellationRequested)),
+      takeUntil(this._requestCancellation.pipe(filter(r => r.document === document || r.cell === cell)))
     );
 
     const collectedMessages = outputStream
@@ -110,11 +105,7 @@ export class NotebookKernel implements vscode.NotebookKernel {
               ...acc,
               {
                 outputKind: vscode.CellOutputKind.Rich,
-                data: (msg.content as {
-                  data: {
-                    [mimeType: string]: string;
-                  }
-                }).data
+                data: msg.content.data
               }
             ]
           }
@@ -172,25 +163,16 @@ export class NotebookKernel implements vscode.NotebookKernel {
   public async executeAllCells(
     document: vscode.NotebookDocument
   ): Promise<void> {
-    this._documentCancellationTokens.get(document)?.cancel();
-    const source = new vscode.CancellationTokenSource();
-    this._documentCancellationTokens.set(document, source);
-    const token = source.token;
-
     for (const cell of document.cells) {
-      if (token.isCancellationRequested) {
-        break;
-      }
-
-      await this._executeCell(document, cell, token);
+      await this._executeCell(document, cell);
     }
   }
 
   cancelCellExecution(document: vscode.NotebookDocument, cell: vscode.NotebookCell) {
-    this._cellCancellationTokens.get(cell)?.cancel();
+    this._requestCancellation.next({ document, cell });
   }
 
   cancelAllCellsExecution(document: vscode.NotebookDocument) {
-    this._documentCancellationTokens.get(document)?.cancel();
+    this._requestCancellation.next({ document });
   }
 }
