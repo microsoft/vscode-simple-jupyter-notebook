@@ -8,14 +8,6 @@ import * as path from 'path';
 
 declare var TextEncoder: any;
 
-// const mjAPI = require('mathjax-node');
-// mjAPI.config({
-// 	MathJax: {
-// 		// traditional MathJax configuration
-// 	}
-// });
-// mjAPI.start();
-
 interface CellStreamOutput {
 	output_type: 'stream';
 	text: string;
@@ -60,15 +52,14 @@ export class Cell {
 		public cell_type: 'markdown' | 'code',
 		private _outputs: vscode.CellOutput[]
 	) {
-
 	}
 
 	containHTML() {
 		return this._outputs && this._outputs.some(output => {
+			
 			if (output.outputKind === vscode.CellOutputKind.Rich && output.data['text/html']) {
 				return true;
 			}
-
 			return false;
 		});
 	}
@@ -318,10 +309,8 @@ async function timeFn(fn: () => Promise<void>): Promise<number> {
 	return Date.now() - startTime;
 }
 
-// For test
-const DELAY_EXECUTION = true;
-
 export class NotebookProvider implements vscode.NotebookContentProvider {
+
 	private _onDidChangeNotebook = new vscode.EventEmitter<vscode.NotebookDocumentEditEvent>();
 	onDidChangeNotebook: vscode.Event<vscode.NotebookDocumentEditEvent> = this._onDidChangeNotebook.event;
 	private _notebooks: Map<string, JupyterNotebook> = new Map();
@@ -358,8 +347,6 @@ export class NotebookProvider implements vscode.NotebookContentProvider {
 			throw new Error('Fail to load the document');
 		}
 	}
-
-
 
 	async saveNotebook(document: vscode.NotebookDocument, token: vscode.CancellationToken): Promise<void> {
 		return this._save(document, document.uri, token);
@@ -421,52 +408,11 @@ export class NotebookProvider implements vscode.NotebookContentProvider {
 		return;
 	}
 
-	async executeAllCells(document: vscode.NotebookDocument, token: vscode.CancellationToken): Promise<void> {
-		await this.executeCell(document, undefined, token);
-	}
-
-	async executeCell(document: vscode.NotebookDocument, cell: vscode.NotebookCell | undefined, token: vscode.CancellationToken): Promise<void> {
-		if (cell) {
-			cell.metadata.statusMessage = 'Running';
-			cell.metadata.runStartTime = Date.now();
-			cell.metadata.runState = vscode.NotebookCellRunState.Running;
-		}
-
-		const duration = await timeFn(async () => {
-			if (DELAY_EXECUTION) {
-				return this._executeCellDelayed(document, cell, token);
-			}
-
-			const jupyterNotebook = this._notebooks.get(document.uri.toString());
-			if (jupyterNotebook) {
-				return jupyterNotebook.execute(document, cell);
-			}
-		});
-
-		if (cell) {
-			cell.metadata.lastRunDuration = duration;
-			cell.metadata.statusMessage = 'Success'
-			cell.metadata.runState = vscode.NotebookCellRunState.Success;
-		}
-	}
-
-	private async _executeCellDelayed(document: vscode.NotebookDocument, cell: vscode.NotebookCell | undefined, token: vscode.CancellationToken): Promise<void> {
-		let jupyterNotebook = this._notebooks.get(document.uri.toString());
-		return new Promise(async resolve => {
-			token.onCancellationRequested(() => {
-				resolve();
-			});
-
-			await new Promise(resolve => setTimeout(resolve, Math.random() * 2500));
-			if (jupyterNotebook && !token.isCancellationRequested) {
-				return jupyterNotebook.execute(document, cell).then(resolve);
-			}
-		});
-	}
-
+	/*
 	async revertNotebook(_document: vscode.NotebookDocument, _cancellation: vscode.CancellationToken): Promise<void> {
 		return;
 	}
+	*/
 
 	async backupNotebook(document: vscode.NotebookDocument, context: vscode.NotebookDocumentBackupContext, cancellation: vscode.CancellationToken): Promise<vscode.NotebookDocumentBackup> {
 		await this._save(document, context.destination, cancellation);

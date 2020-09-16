@@ -13,6 +13,8 @@ In detail the sample shows how to:
 
 ## Running the sample
 
+Make sure to disable the Python extension because its Juypter notebook implementation will conflict with this Python notebook extension.
+
 We assume that you have already cloned this repository, ran `npm install` and opened the project in VS Code.
 
 In order to use cell debugging you will need a kernel implementing the Jupyter Debug Protocol. For now, the only kernel implementing this protocol, is **xeus-python** a new Jupyter kernel for the Python programming language. You can either install xeus-python locally (which might interfere with your existing Python installation in undesirable ways) or you can run the extension remotely in a preconfigured Docker container that will have everything you need.
@@ -32,7 +34,7 @@ After these two alternative setups we can start working with Jupyter notebooks.
 
 Pressing **F5** opens another VS Code window with a project folder containing a sample Jupyter notebook.
 
-Before doing anything with this notebook, press F1 and type "kernel". Run the `Simple Jupyter Notebook: Change Kernel` command. The resulting Quickpick lists the kernels discovered on your machine and should show an **xpython** entry that represents the xeus-python kernel. Select that entry.
+Before doing anything with this notebook, press F1 and type "kernel". Run the `Notebook: Select Notebook Kernel` command. The resulting Quickpick lists the kernels discovered on your machine and should show an **xpython** entry that represents the xeus-python kernel. Select that entry.
 
 If there is no xpython entry that's an indication that we can't find a Jupyter kernel out of the box (e.g. with some conda setup that places things in non-default paths), you can set the correct path in the `simple-jupyter.searchPaths` config key, see the [this page](https://jupyter-client.readthedocs.io/en/stable/kernels.html#kernel-specs) to get an idea of what the paths look like.
 

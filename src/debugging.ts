@@ -158,7 +158,8 @@ class Debugger {
         type: 'xeus',
         name: `${path.basename(document.fileName)}`,
         request: 'attach',
-        __document: document.uri.toString(),
+        internalConsoleOptions: 'neverOpen',
+        __document: document.uri.toString()
       }).then(undefined, reject);
     });
   }
@@ -176,11 +177,7 @@ class Debugger {
   }
 
   async stop() {
-    if (vscode.debug.activeDebugSession === await this.session) {
-      return vscode.commands.executeCommand('workbench.action.debug.stop');
-    } else {
-      console.log('cannot stop debugger');
-    }
+    vscode.debug.stopDebugging(await this.session);
   }
 }
 

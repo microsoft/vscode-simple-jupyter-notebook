@@ -20,7 +20,6 @@ export class NotebookKernel implements vscode.NotebookKernel {
   public label: string;
   public description: string;
   public isPreferred: boolean;
-  private _runningKernel?: IRunningKernel;
   private _resolveKernel?: Promise<IRunningKernel | undefined>;
   private _requestCancellation = new Subject<{ document?: vscode.NotebookDocument; cell?: vscode.NotebookCell }>()
 
@@ -43,7 +42,6 @@ export class NotebookKernel implements vscode.NotebookKernel {
       .launchKernel(this.kernelSpec)
       .then(
         async (instance): Promise<IRunningKernel | undefined> => {
-          this._runningKernel = instance;
           return instance; // undefined or an updated kernel
         },
       )

@@ -4,7 +4,6 @@
 import * as vscode from 'vscode';
 import { KernelManager } from './kernelManager';
 import { KernelProvider, LocationType } from './kernelProvider';
-import { NotebookKernel } from './notebookKernel';
 import { DebuggingManager } from './debugging';
 import { NotebookProvider } from './notebookProvider';
 
@@ -27,15 +26,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
 
-    //vscode.notebook.registerNotebookKernel('simple-jupyter-kernel', ['*'], kernel),
-
     vscode.notebook.registerNotebookContentProvider('jupyter', provider),
 
     vscode.notebook.registerNotebookKernelProvider({ viewType: 'jupyter' }, kernelManager),
-
-    vscode.commands.registerCommand('simple-jupyter-notebook.change-kernel', () =>
-      kernelManager.changeActive(),
-    ),
 
     vscode.commands.registerCommand('simple-jupyter-notebook.restart-kernel', () =>
       kernelManager.closeAllKernels(),

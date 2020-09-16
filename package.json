@@ -14,9 +14,8 @@
     "Other"
   ],
   "activationEvents": [
-    "*",
     "onNotebookEditor:jupyter",
-    "onCommand:simple-jupyter-notebook.change-kernel",
+    "onNotebook:jupyter",
     "onCommand:simple-jupyter-notebook.restart-kernel",
     "onDebug:xeus"
   ],
@@ -47,25 +46,27 @@
     ],
     "commands": [
       {
-        "command": "simple-jupyter-notebook.change-kernel",
-        "title": "Simple Jupyter Notebook: Change Kernel"
+        "command": "simple-jupyter-notebook.toggleDebugging",
+        "title": "Toggle Notebook Debugging",
+        "icon": "$(bug)"
       },
       {
         "command": "simple-jupyter-notebook.restart-kernel",
-        "title": "Simple Jupyter Notebook: Restart Kernel"
-      },
-      {
-        "command": "simple-jupyter-notebook.toggleDebugging",
-        "title": "Toggle Debugging",
-        "icon": "$(bug)"
+        "title": "Restart Notebook Kernel",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
       "editor/title": [
         {
           "command": "simple-jupyter-notebook.toggleDebugging",
-          "when": "notebookEditorFocused",
+          "when2": "notebookEditorFocused",
           "group": "navigation@1"
+        },
+        {
+          "command": "simple-jupyter-notebook.restart-kernel",
+          "when": "notebookEditorFocused",
+          "group": "navigation@2"
         }
       ]
     },
