@@ -60,12 +60,12 @@
       "editor/title": [
         {
           "command": "simple-jupyter-notebook.toggleDebugging",
-          "when2": "notebookEditorFocused",
+          "when2": "notebookViewType == jupyter",
           "group": "navigation@1"
         },
         {
           "command": "simple-jupyter-notebook.restart-kernel",
-          "when": "notebookEditorFocused",
+          "when2": "notebookViewType == jupyter",
           "group": "navigation@2"
         }
       ]
