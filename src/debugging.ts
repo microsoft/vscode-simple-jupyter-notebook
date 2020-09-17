@@ -7,7 +7,7 @@ import { KernelManager } from './kernelManager';
 import { DebugProtocol } from 'vscode-debugprotocol';
 import { IRunningKernel } from './kernelProvider';
 import { debugRequest, debugResponse, MessageType, JupyterMessage, DebugMessage } from './messaging';
-import { filter, tap } from 'rxjs/operators';
+import { filter /*, tap*/ } from 'rxjs/operators';
 import { Subscription } from 'rxjs';
 import * as path from 'path';
 
@@ -81,7 +81,7 @@ export class DebuggingManager {
     if (map.size > 0) {
       const addBpts: vscode.SourceBreakpoint[] = [];
       const removeBpt: vscode.SourceBreakpoint[] = [];
-      for (let b of vscode.debug.breakpoints) {
+      for (const b of vscode.debug.breakpoints) {
         if (b instanceof vscode.SourceBreakpoint) {
           const s = map.get(b.location.uri.toString());
           if (s) {
@@ -133,7 +133,7 @@ export class DebuggingManager {
   }
 
   private updateDebuggerUI(doc: vscode.NotebookDocument, showBreakpointsMargin: boolean) {
-    for (let cell of doc.cells) {
+    for (const cell of doc.cells) {
       if (cell.cellKind === vscode.CellKind.Code) {
         cell.metadata.breakpointMargin = showBreakpointsMargin;
       }
@@ -144,7 +144,7 @@ export class DebuggingManager {
 class Debugger {
 
   private resolveFunc?: (value: vscode.DebugSession) => void;
-  private rejectFunc?: (reason?: any) => void;
+  private rejectFunc?: (reason?: Error) => void;
 
   readonly session: Promise<vscode.DebugSession>;
 
@@ -170,7 +170,7 @@ class Debugger {
     }
   }
 
-  reject(reason: any) {
+  reject(reason: Error) {
     if (this.rejectFunc) {
       this.rejectFunc(reason);
     }
@@ -241,8 +241,8 @@ class XeusDebugAdapter implements vscode.DebugAdapter {
     // console.log('-> send', message);
 
     // intercept 'setBreakpoints' request
-    if (message.type === 'request' && (<any>message).command === 'setBreakpoints') {
-      const args = (<any>message).arguments;
+    if (message.type === 'request' && (message as DebugProtocol.Request).command === 'setBreakpoints') {
+      const args = (message as DebugProtocol.Request).arguments;
       if (args.source && args.source.path && args.source.path.indexOf('vscode-notebook-cell:') === 0) {
         await this.dumpCell(args.source.path);
       }
@@ -295,58 +295,58 @@ function visitSources(msg: DebugProtocol.ProtocolMessage, sourceHook: (source: D
 
   switch (msg.type) {
     case 'event':
-      const event = <DebugProtocol.Event>msg;
+      const event = msg as DebugProtocol.Event;
       switch (event.event) {
         case 'output':
-          sourceHook((<DebugProtocol.OutputEvent>event).body.source);
+          sourceHook((event as DebugProtocol.OutputEvent).body.source);
           break;
         case 'loadedSource':
-          sourceHook((<DebugProtocol.LoadedSourceEvent>event).body.source);
+          sourceHook((event as DebugProtocol.LoadedSourceEvent).body.source);
           break;
         case 'breakpoint':
-          sourceHook((<DebugProtocol.BreakpointEvent>event).body.breakpoint.source);
+          sourceHook((event as DebugProtocol.BreakpointEvent).body.breakpoint.source);
           break;
         default:
           break;
       }
       break;
     case 'request':
-      const request = <DebugProtocol.Request>msg;
+      const request = msg as DebugProtocol.Request;
       switch (request.command) {
         case 'setBreakpoints':
-          sourceHook((<DebugProtocol.SetBreakpointsArguments>request.arguments).source);
+          sourceHook((request.arguments as DebugProtocol.SetBreakpointsArguments).source);
           break;
         case 'breakpointLocations':
-          sourceHook((<DebugProtocol.BreakpointLocationsArguments>request.arguments).source);
+          sourceHook((request.arguments as DebugProtocol.BreakpointLocationsArguments).source);
           break;
         case 'source':
-          sourceHook((<DebugProtocol.SourceArguments>request.arguments).source);
+          sourceHook((request.arguments as DebugProtocol.SourceArguments).source);
           break;
         case 'gotoTargets':
-          sourceHook((<DebugProtocol.GotoTargetsArguments>request.arguments).source);
+          sourceHook((request.arguments as DebugProtocol.GotoTargetsArguments).source);
           break;
         default:
           break;
       }
       break;
     case 'response':
-      const response = <DebugProtocol.Response>msg;
+      const response = msg as DebugProtocol.Response;
       if (response.success && response.body) {
         switch (response.command) {
           case 'stackTrace':
-            (<DebugProtocol.StackTraceResponse>response).body.stackFrames.forEach(frame => sourceHook(frame.source));
+            (response as DebugProtocol.StackTraceResponse).body.stackFrames.forEach(frame => sourceHook(frame.source));
             break;
           case 'loadedSources':
-            (<DebugProtocol.LoadedSourcesResponse>response).body.sources.forEach(source => sourceHook(source));
+            (response as DebugProtocol.LoadedSourcesResponse).body.sources.forEach(source => sourceHook(source));
             break;
           case 'scopes':
-            (<DebugProtocol.ScopesResponse>response).body.scopes.forEach(scope => sourceHook(scope.source));
+            (response as DebugProtocol.ScopesResponse).body.scopes.forEach(scope => sourceHook(scope.source));
             break;
           case 'setFunctionBreakpoints':
-            (<DebugProtocol.SetFunctionBreakpointsResponse>response).body.breakpoints.forEach(bp => sourceHook(bp.source));
+            (response as DebugProtocol.SetFunctionBreakpointsResponse).body.breakpoints.forEach(bp => sourceHook(bp.source));
             break;
           case 'setBreakpoints':
-            (<DebugProtocol.SetBreakpointsResponse>response).body.breakpoints.forEach(bp => sourceHook(bp.source));
+            (response as DebugProtocol.SetBreakpointsResponse).body.breakpoints.forEach(bp => sourceHook(bp.source));
             break;
           default:
             break;
