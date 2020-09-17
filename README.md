@@ -40,7 +40,7 @@ If there is no xpython entry that's an indication that we can't find a Jupyter k
 
 If xpython was found and set as the current kernel succesfully you can start editing the notebook and evaluating Python cells.
 
-In order to debug cells you can enable debug mode by pressing the "bug" action in the editors toolbook.
+In order to debug cells you can enable debug mode by pressing the "bug" action in the editor's toolbar.
 This opens the debug toolbar and makes the breakpoint gutter available where you can set breakpoints.
 When you now evaluate cells, breakpoints are hit and you can inspect variables and datastructures in VS Code's usual debugger views and panes.
 
